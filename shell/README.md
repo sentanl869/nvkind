@@ -74,7 +74,7 @@ With all of the prerequisites installed, run the following commands to
 configure the `nvidia-container-toolkit` for use with `kind`.
 
 ```bash
-sudo nvidia-ctk runtime configure --runtime=docker --set-as-default --cdi.enabled
+sudo nvidia-ctk runtime configure --runtime=docker --set-as-default --cdi.enabled --config-source=command
 sudo nvidia-ctk config --set accept-nvidia-visible-devices-as-volume-mounts=true --in-place
 sudo systemctl restart docker
 ```

@@ -20,6 +20,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
+	"os"
 	"os/exec"
 	"reflect"
 	"sort"
@@ -40,6 +42,14 @@ import (
 const (
 	nvkindClusterConfigName = "nvkind-cluster-config"
 )
+
+const k8sRuntimeClassYaml = `---
+apiVersion: node.k8s.io/v1
+handler: nvidia
+kind: RuntimeClass
+metadata:
+  name: nvidia
+`
 
 func GetClusterNames() (sets.Set[string], error) {
 	command := []string{
@@ -123,17 +133,53 @@ func (c *Cluster) Create(opts ...ClusterCreateOption) error {
 	return nil
 }
 
+func (c *Cluster) PrintClusterInfo() error {
+	// A note on `kubectl` invocations: not specifying `--context <name>` would
+	// probably work in most of the cases because `kind` also sets the default
+	// context. However, it is better to be explicit. For concurrent executions
+	// of `nvkind` it is certainly a requirement to be explicit about the
+	// context to prevent race conditions.
+
+	// Display endpoints against which kubectl is configured.
+	cmd := []string{
+		"kubectl", "cluster-info", "--context", "kind-" + c.Name,
+	}
+	if err := runChildProcess(cmd, ""); err != nil {
+		return fmt.Errorf("running process: %w", err)
+	}
+
+	cmd = []string{
+		"kubectl", "--context", "kind-" + c.Name, "get", "nodes",
+	}
+	if err := runChildProcess(cmd, ""); err != nil {
+		return fmt.Errorf("running process: %w", err)
+	}
+
+	return nil
+}
+
+func (c *Cluster) RegisterNvidiaRuntimeClass() error {
+	// Register runtimeclass.node.k8s.io/nvidia, allowing usage of
+	// --set runtimeClassName=nvidia upon helm-installing e.g. the k8s-device-plugin.
+	cmd := []string{
+		"kubectl", "--context", "kind-" + c.Name, "apply", "-f", "-",
+	}
+
+	if err := runChildProcess(cmd, k8sRuntimeClassYaml); err != nil {
+		return fmt.Errorf("running process: %w", err)
+	}
+
+	return nil
+}
+
+// Note(JP): not exposed via CLI, we may want to remove this for now.
 func (c *Cluster) Delete() error {
 	command := []string{
 		"kind", "delete", "cluster",
 		"--name", c.Name,
 	}
 
-	cmd := exec.Command(command[0], command[1:]...)
-	cmd.Stdout = c.stdout
-	cmd.Stderr = c.stderr
-
-	if err := cmd.Run(); err != nil {
+	if err := runChildProcess(command, ""); err != nil {
 		return fmt.Errorf("executing command: %w", err)
 	}
 
@@ -299,4 +345,33 @@ func getConfigBytesFromExistingCluster(name string) ([]byte, error) {
 	}
 
 	return []byte(configMap.Data["config"]), nil
+}
+
+func runChildProcess(args []string, input string) error {
+	cmdStr := strings.Join(args[:], " ")
+	cmd := exec.Command(args[0], args[1:]...)
+
+	// Let child's stdout/err flow directly to current process's standard streams.
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+
+	// Write data to child's stdin.
+	if len(input) > 0 {
+		pipe, err := cmd.StdinPipe()
+		if err != nil {
+			return fmt.Errorf("attaching pipe to child: %w", err)
+		}
+
+		go func() {
+			defer pipe.Close()
+			io.WriteString(pipe, input)
+		}()
+	}
+
+	fmt.Printf("+ %v\n", cmdStr)
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("error running '%v': %w", cmdStr, err)
+	}
+
+	return nil
 }

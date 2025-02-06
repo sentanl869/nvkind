@@ -135,6 +135,14 @@ func runClusterCreate(c *cli.Context, f *ClusterCreateFlags) error {
 		}
 	}
 
+	if err := cluster.PrintClusterInfo(); err != nil {
+		return fmt.Errorf("getting cluster info: %w", err)
+	}
+
+	if err := cluster.RegisterNvidiaRuntimeClass(); err != nil {
+		return fmt.Errorf("registering runtime class: %w", err)
+	}
+
 	return nil
 }
 
