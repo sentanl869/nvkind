@@ -256,7 +256,7 @@ func (o *ClusterOptions) setConfig() error {
 	}
 
 	if o.name != "" && o.config != nil {
-		o.config.Cluster.Name = o.name
+		o.config.Name = o.name
 	}
 
 	if !existingClusters.Has(o.name) && o.config != nil {
@@ -348,7 +348,7 @@ func getConfigBytesFromExistingCluster(name string) ([]byte, error) {
 }
 
 func runChildProcess(args []string, input string) error {
-	cmdStr := strings.Join(args[:], " ")
+	cmdStr := strings.Join(args, " ")
 	cmd := exec.Command(args[0], args[1:]...)
 
 	// Let child's stdout/err flow directly to current process's standard streams.
