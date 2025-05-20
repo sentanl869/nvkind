@@ -123,16 +123,22 @@ Build `nvkind`:
 make
 ```
 
+### Default cluster: One node with all GPUs
+
 Create a default cluster with 1 worker node with access to all GPUs on the machine:
 ```bash
 ./nvkind cluster create
 ```
+
+### Example: One node per GPU
 
 Create a cluster with 1 worker node per GPU on the machine:
 ```bash
 ./nvkind cluster create \
 --config-template=examples/one-worker-per-gpu.yaml
 ```
+
+### Example: Four nodes with two GPUs
 
 Assuming a machine with 8 GPUs, create a cluster with 4 worker nodes and 2 GPUs
 evenly distributed to each:
@@ -145,6 +151,8 @@ evenly distributed to each:
 numWorkers: 4
 EOF
 ```
+
+### Example: Mixed configuration nodes
 
 Assuming a machine with 8 GPUs, create a cluster with 2 worker nodes, the first
 with access to GPU 0 and the second with access to GPUs 1, 2, and 3.
@@ -159,6 +167,8 @@ workers:
 - devices: [1, 2, 3]
 EOF
 ```
+
+### Describing your clusters
 
 List the clusters:
 ```bash
