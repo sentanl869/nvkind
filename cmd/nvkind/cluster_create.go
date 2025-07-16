@@ -124,9 +124,9 @@ func runClusterCreate(c *cli.Context, f *ClusterCreateFlags) error {
 		if !node.HasGPUs() {
 			continue
 		}
-		if err := node.InstallContainerToolkit(); err != nil {
-			return fmt.Errorf("installing container toolkit on node '%v': %w", node.Name, err)
-		}
+		//if err := node.InstallContainerToolkit(); err != nil {
+		//	return fmt.Errorf("installing container toolkit on node '%v': %w", node.Name, err)
+		//}
 		if err := node.ConfigureContainerRuntime(); err != nil {
 			return fmt.Errorf("configuring container runtime on node '%v': %w", node.Name, err)
 		}
